@@ -1,0 +1,258 @@
+<!DOCTYPE html>
+<html>
+<head>
+	<title>F*ck Java Applets</title>
+	<!--
+	
+	Spirograph something.
+	> Matthew Consterdine
+	
+	Controls:
+	> SPACE - Pause/Resume
+	> C     - Clear
+	> I     - Invert
+	> T     - Toggle Trails
+	> +     - Add more Spiros
+	> -     - Remove Spiros
+	
+	Use the scrollwheel to change the speed.
+	
+	-->
+	<style>
+		body { 
+			margin: 0; 
+			padding: 0;
+			overflow: hidden;
+			background: white;
+		}
+		
+		#c {
+			position: absolute;
+			top: 0; bottom: 0; left: 0; right: 0;
+			user-select: none;
+		}
+	</style>
+</head>
+<body oncontextmenu="return false">
+	<canvas id="canvas"></canvas>
+	<script>
+		// Best names
+		function Spiro (iR, ir, iO, ix, iy, idx, idy, ia, ida, iw, ic) {
+			this.R = iR;
+			this.r = ir;
+			this.O = iO;
+			this.x = ix;
+			this.y = iy;
+			this.dx = idx;
+			this.dy = idy;
+			this.a = ia;
+			this.da = ida;
+			this.w = iw;
+			this.c = ic;
+			
+			this.update = function(deltaTime, boundsX, boundsY) {
+				this.x += this.dx * deltaTime;
+				this.y += this.dy * deltaTime;
+				
+				// Force it to be within a bounding box, if one is set.
+				if (boundsX != -1 && boundsY != -1) {
+					// 100 to stop popping
+					if (this.x < -100) this.x = boundsX + 100;
+					if (this.y < -100) this.y = boundsY + 100;
+					if (this.x > boundsX + 100) this.x = -100;
+					if (this.y > boundsY + 100) this.y = -100;
+				}
+				
+				// Rotate the spiro and ensure its within 0 and 360
+				this.a = ((this.a + this.da * deltaTime) % 360 + 360) % 360; // Ensure its positive.
+			}
+			
+			this.render = function(context) {
+				// Get ready to draw.
+				context.lineWidth   = this.w;
+				context.strokeStyle = this.c;
+				context.beginPath();
+				
+				for(var t = 0.0; t <= 20*Math.PI; t += Math.PI / 50) {
+					// Plot and draw.
+					var x = (this.R + this.r + this.O)*2.5 + (this.R+this.r)*Math.cos(t) - (this.r+this.O)*Math.cos(((this.R+this.r)/this.r)*t);
+					var y = (this.R + this.r + this.O)*2.5 + (this.R+this.r)*Math.sin(t) - (this.r+this.O)*Math.sin(((this.R+this.r)/this.r)*t);
+					context.lineTo(x,y);
+				}
+				
+				context.stroke();
+			}
+			
+			this.buffer = document.createElement("canvas");
+			this.buffer.context = this.buffer.getContext("2d");
+			this.buffer.width = this.buffer.height = 5 * (this.R + this.r + this.O);
+			this.render(this.buffer.context);
+			
+			return this;
+		}
+		
+		
+		// Simple random number thingy
+		function random(min, max) {return Math.random() * (max - min) + min;}
+		
+		function randomColor() {
+			var color = "#", letters = '0123456789ABCDEF'.split('');
+			for (var i = 0; i < 6; i++ ) color += letters[Math.floor(Math.random() * 16)];
+			return color;
+		}
+		
+		// Identify the canvas
+		var canvas = document.getElementById("canvas");
+		var swap   = document.createElement("canvas");
+		canvas.context = canvas.getContext("2d");
+		swap.context   = swap.getContext("2d"); 
+		
+		swap.width  = canvas.width  = window.innerWidth;
+		swap.height = canvas.height = window.innerHeight;
+		
+		// Generate the spiros
+		var spiros = [];
+		for (var i = 0; i < 25; i += 1) {
+			spiros[spiros.length] = new Spiro(
+				random(0, 100),
+				random(0, 25),
+				random(0, 50),
+				random(0, canvas.width),
+				random(0, canvas.height),
+				random(-0.02, 0.02),
+				random(-0.02, 0.02),
+				random(0, 360),
+				random(-0.0005, 0.0005),
+				random(0.5, 2),
+				randomColor()
+			);
+		}
+		
+		// Stores the delta and stuff
+		var timeDelta = 50;
+		var running   = true;
+		var trails    = false;
+		var invert    = false;
+		
+		window.addEventListener("mousewheel", function(e) {
+			var e     = window.event || e; // old IE support
+			var delta = Math.max(-1, Math.min(1, (e.wheelDelta || -e.detail)));
+			
+			timeDelta += delta*10;
+		});
+		
+		window.addEventListener("keydown", function(e) {
+			var e = window.event || e; // old IE support
+			
+			switch(e.keyCode) {
+				case 32: // SPACE
+					running = !running;
+					break;
+				case 67: // C
+					spiros = [];
+					break;
+				case 73: // I
+					invert = !invert;
+					document.getElementsByTagName("body")[0].style.backgroundColor = invert ? "black" : "white";
+					break;
+				case 84: // T
+					trails = !trails;
+					break;
+				case 187: // +
+					spiros.push(new Spiro(
+						random(0, 100),
+						random(0, 25),
+						random(0, 50),
+						random(0, canvas.width),
+						random(0, canvas.height),
+						random(-0.02, 0.02),
+						random(-0.02, 0.02),
+						random(0, 360),
+						random(-0.0005, 0.0005),
+						random(0.5, 2),
+						randomColor()
+					));
+					break;
+				case 189: // -
+					spiros.pop();
+					break;
+			}
+		});
+		
+		// Spawn on mouse
+		window.addEventListener("mousedown", function(e) {
+			spiros.push(new Spiro(
+				random(0, 100),
+				random(0, 25),
+				random(0, 50),
+				e.clientX,
+				e.clientY,
+				random(-0.02, 0.02),
+				random(-0.02, 0.02),
+				random(0, 360),
+				random(-0.0005, 0.0005),
+				random(0.5, 2),
+				randomColor()
+			));
+		});
+		
+		// Spawn on touch
+		window.addEventListener("touchstart", function(e) {
+			for(var i = 0; i < e.touches.length; i++) {
+				spiros.push(new Spiro(
+					random(0, 100),
+					random(0, 25),
+					random(0, 50),
+					e.touches[i].clientX,
+					e.touches[i].clientY,
+					random(-0.02, 0.02),
+					random(-0.02, 0.02),
+					random(0, 360),
+					random(-0.0005, 0.0005),
+					random(0.5, 2),
+					randomColor()
+				));
+			};
+		});
+		
+		// Handle resize
+		window.addEventListener("resize", function(e) {
+			swap.width  = canvas.width  = window.innerWidth;
+			swap.height = canvas.height = window.innerHeight;
+		});
+		
+		// Starts the image of black
+		canvas.context.fillStyle = "#fff";
+		canvas.context.lineJoin = "round";
+		canvas.context.fillRect(0, 0, canvas.width, canvas.height);
+		
+		function draw() {
+			if(trails) {
+				// Darken each pixel in the existing image.
+				swap.context.clearRect(0, 0, swap.width, swap.height);
+				swap.context.globalAlpha = .9;
+				swap.context.drawImage(canvas, 0, 0);
+			}
+			
+			canvas.context.clearRect(0, 0, canvas.width, canvas.height);
+			if(trails) canvas.context.drawImage(swap, 0, 0);
+			
+			spiros.forEach(function(entry) {
+				// Move the spiro
+				if(running) entry.update(timeDelta, canvas.width, canvas.height);
+				
+				canvas.context.save();
+				canvas.context.translate(entry.x, entry.y);
+				canvas.context.rotate(entry.a);
+				canvas.context.drawImage(entry.buffer, 0 - entry.buffer.width/2, 0 - entry.buffer.height/2);
+				canvas.context.restore();
+			});
+			
+			// Sets it to be called each frame
+			requestAnimationFrame(draw);
+		}
+		
+		draw();
+	</script>
+</body>
+</html>
