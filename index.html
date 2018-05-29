@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html>
 <head>
-	<title>F*ck Java Applets</title>
+	<title>Spirograph | Matt Consto</title>
 	<!--
 	
 	Spirograph something.
@@ -24,17 +24,30 @@
 			padding: 0;
 			overflow: hidden;
 			background: white;
+			color: black;
+			font-family: sans-serif;
+			font-size: 1.25em;
 		}
+
+		a {color: black; text-decoration: none}
+		a:hover {text-decoration: underline}
 		
-		#c {
+		#canvas {
 			position: absolute;
 			top: 0; bottom: 0; left: 0; right: 0;
 			user-select: none;
+		}
+
+		#attribution {
+			position: fixed;
+			bottom: 1em;
+			right: 1em;
 		}
 	</style>
 </head>
 <body oncontextmenu="return false">
 	<canvas id="canvas"></canvas>
+	<div id="attribution">By <a href="https://consto.uk/2014/11/07/spirograph">Matt Consto</a></div>
 	<script>
 		// Best names
 		function Spiro (iR, ir, iO, ix, iy, idx, idy, ia, ida, iw, ic) {
